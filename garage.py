@@ -28,8 +28,31 @@ a {
 class GpioToggler(object):
     def __init__(self):
         self.lock = threading.Lock()
+        self.pins = {}
+        self.set_up_pin("garage", "408")
+        self.set_up_pin("light", "409")
+
+    def set_up_pin(self, name, which):
+        self.pins[name] = which
+
+        # export the pin
+        try:
+            with open("/sys/class/gpio/export", "w") as f:
+                f.write(which)
+        except:
+            # if this is already exported, the write will fail; continue anyways
+            pass
+        # set the direction
+        with open("/sys/class/gpio/gpio%s/direction" % which, "w") as f:
+            f.write("out")
+        # set the output to zero
+        with open("/sys/class/gpio/gpio%s/value" % which, "w") as f:
+            f.write("0")
 
     def toggle_pin(self, pin):
+        if self.pins.has_key(pin) == False:
+            print "Bad pin %s" % pin
+            return 400
         has_lock = self.lock.acquire(False)
         if has_lock:
             t = threading.Thread(target=self.toggle_pin_worker, args=(pin,))
@@ -41,7 +64,7 @@ class GpioToggler(object):
     def toggle_pin_worker(self, pin):
         try:
             print "Toggling pin %s" % pin
-            with open("/sys/class/gpio/gpio%s/value" % pin, "w") as f:
+            with open("/sys/class/gpio/gpio%s/value" % self.pins[pin], "w") as f:
                 f.write("1")
                 f.flush()
                 time.sleep(1)
@@ -66,11 +89,11 @@ def garage():
 
 @app.route('/garage/door')
 def door():
-    return redirect('/garage?code=%s' % toggler.toggle_pin("408"))
+    return redirect('/garage?code=%s' % toggler.toggle_pin("garage"))
 
 @app.route('/garage/light')
 def light():
-    return redirect('/garage?code=%s' % toggler.toggle_pin("409"))
+    return redirect('/garage?code=%s' % toggler.toggle_pin("light"))
 
 if __name__ == '__main__':
     toggler = GpioToggler()
