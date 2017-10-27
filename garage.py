@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 from flask import Flask, redirect, request
-import requests
 import time
 import threading
 
@@ -32,9 +31,18 @@ class GpioToggler(object):
         self.set_up_pin("garage", "408")
         self.set_up_pin("light", "409")
 
-    def set_up_pin(self, name, which):
-        self.pins[name] = which
+        # Once the other pins are ready, enable the opener
+        self.enable("410")
 
+    def enable(self, which):
+        self.set_up_pin_raw(which, "0")
+
+    def set_up_pin(self, name, which, value="0"):
+        self.pins[name] = which
+        self.set_up_pin_raw(which, value)
+
+
+    def set_up_pin_raw(self, which, value):
         # export the pin
         try:
             with open("/sys/class/gpio/export", "w") as f:
@@ -47,7 +55,7 @@ class GpioToggler(object):
             f.write("out")
         # set the output to zero
         with open("/sys/class/gpio/gpio%s/value" % which, "w") as f:
-            f.write("0")
+            f.write(value)
 
     def toggle_pin(self, pin):
         if self.pins.has_key(pin) == False:
@@ -67,10 +75,10 @@ class GpioToggler(object):
             with open("/sys/class/gpio/gpio%s/value" % self.pins[pin], "w") as f:
                 f.write("1")
                 f.flush()
-                time.sleep(1)
+                time.sleep(0.25)
                 f.write("0")
                 f.flush()
-            time.sleep(2)
+            time.sleep(1.25)
             print "Unlocking!"
         except Exception as e:
             print "Something broke: %s" % e
