@@ -1,0 +1,23 @@
+This provides a simple garage door opener web interface.
+It has no security beyond whatever your wifi offers.
+It does exactly what it has to and no more!
+
+# How to use this
+
+1. Check out this git repository in `/root/garagetron` on your CHIP or whatever Linux device.
+2. Set up the GPIOs correctly (these work on a CHIP running kernel 4.3.0-ntc):
+
+    408 is for the door
+    409 is for the light
+    410 is the enable line
+
+3. Edit the lines in "garage.py" if you want to use a different GPIO port.
+4. Figure out the IP address of the device.
+5. Run `python garage.py`.
+6. Open "http://ipaddress/garage" in a browser, and click the button!
+
+
+# To automatically start the script on boot:
+
+1. Copy the systemd service file to /etc/systemd/system/garagedoor.service
+2. Run `systemctl enable garagedoor.service`
