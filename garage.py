@@ -82,7 +82,8 @@ class GpioToggler(object):
             print "Unlocking!"
         except Exception as e:
             print "Something broke: %s" % e
-        self.lock.release()
+        finally:
+            self.lock.release()
 
 @app.route('/')
 def slash():
@@ -105,4 +106,4 @@ def light():
 
 if __name__ == '__main__':
     toggler = GpioToggler()
-    app.run(host='0.0.0.0', port=4545)
+    app.run(host='0.0.0.0', port=80)
