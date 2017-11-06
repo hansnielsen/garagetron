@@ -1,0 +1,12 @@
+[Unit]
+Description=garage door opener
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=3
+StartLimitIntervalSec=0
+ExecStart=/usr/bin/python /root/garagetron/garage.py
+
+[Install]
+WantedBy=multi-user.target
