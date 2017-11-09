@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
-from flask import Flask, redirect, request
+from flask import Flask, redirect, request, session, render_template_string, abort
 import time
 import threading
+import os
+from base64 import b64encode
 
 app = Flask('garage')
 
@@ -20,6 +22,7 @@ a {
 </style>
 <script>
 var nextTimeout = null;
+var csrfToken = "{{ csrf_token }}";
 
 function post(which) {
     window.clearTimeout(nextTimeout);
@@ -37,6 +40,7 @@ function post(which) {
         }, 10000);
     }
     xhr.open("POST", "/garage/" + which);
+    xhr.setRequestHeader("X-CSRF-Token", csrfToken);
     xhr.send();
 }
 </script>
@@ -108,13 +112,26 @@ class GpioToggler(object):
         finally:
             self.lock.release()
 
+def csrf_token():
+    if '_csrf_token' not in session:
+        session['_csrf_token'] = b64encode(os.urandom(24))
+    return session['_csrf_token']
+
+@app.before_request
+def csrf_protect():
+    if request.method == "POST":
+        token = session.get('_csrf_token', None)
+        if not token or token != request.headers.get('X-CSRF-Token'):
+            print "Got bad CSRF token in request! Origin was %s" % (request.headers.get("Origin"))
+            abort(400)
+
 @app.route('/')
 def slash():
     return redirect('/garage')
 
 @app.route('/garage')
 def garage():
-    return TEMPLATE
+    return render_template_string(TEMPLATE, csrf_token=csrf_token())
 
 @app.route('/garage/<which>', methods=['POST'])
 def garage_post(which):
@@ -122,4 +139,5 @@ def garage_post(which):
 
 if __name__ == '__main__':
     toggler = GpioToggler()
+    app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0', port=80)
