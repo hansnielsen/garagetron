@@ -18,9 +18,32 @@ a {
     font-size: 60pt;
 }
 </style>
+<script>
+var nextTimeout = null;
+
+function post(which) {
+    window.clearTimeout(nextTimeout);
+    nextTimeout = null;
+
+    var xhr = new XMLHttpRequest();
+    xhr.onload = function (event) {
+        var status = event.target.status;
+        var elem = document.getElementById("status");
+        elem.innerText = "Response: " + status;
+        elem.style.display = "";
+
+        nextTimeout = window.setTimeout(function () {
+            elem.style.display = "none";
+        }, 10000);
+    }
+    xhr.open("POST", "/garage/" + which);
+    xhr.send();
+}
+</script>
 </head><body>
-<div><a href="/garage/door">Door</a></div>
-<div><a href="/garage/light">Light</a></div>
+<div><a href="#" onclick="post('garage')">Door</a></div>
+<div><a href="#" onclick="post('light')">Light</a></div>
+<div id="status" style="display: none; font-size: 24pt;" />
 </body></html>
 '''
 
@@ -91,18 +114,11 @@ def slash():
 
 @app.route('/garage')
 def garage():
-    code = request.args.get('code')
-    if code is not None and code.isdigit():
-        return TEMPLATE + ('Response: %s' % code)
     return TEMPLATE
 
-@app.route('/garage/door')
-def door():
-    return redirect('/garage?code=%s' % toggler.toggle_pin("garage"))
-
-@app.route('/garage/light')
-def light():
-    return redirect('/garage?code=%s' % toggler.toggle_pin("light"))
+@app.route('/garage/<which>', methods=['POST'])
+def garage_post(which):
+    return "", toggler.toggle_pin(which)
 
 if __name__ == '__main__':
     toggler = GpioToggler()
