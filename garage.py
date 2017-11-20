@@ -6,6 +6,8 @@ import threading
 import os
 from base64 import b64encode
 
+import config
+
 app = Flask('garage')
 
 TEMPLATE = '''
@@ -46,31 +48,32 @@ function post(which) {
 }
 </script>
 </head><body>
-<div><a href="#" onclick="post('garage')">Door</a></div>
-<div><a href="#" onclick="post('light')">Light</a></div>
+{% for pin in pins %}
+<div><a href="#" onclick="post('{{ pin["id"] }}')">{{ pin["desc"] }}</a></div>
+{% endfor %}
 <div id="status" style="display: none; font-size: 24pt;" />
 </body></html>
 '''
 
 class GpioToggler(object):
-    def __init__(self):
+    def __init__(self, config):
         self.lock = threading.Lock()
         self.pins = {}
-        self.set_up_pin("garage", "408")
-        self.set_up_pin("light", "409")
+        for pin in config["remote_outputs"]:
+            self.set_up_pin(pin["id"], pin["gpio"], pin["active_low"])
 
         # Once the other pins are ready, enable the opener
-        self.enable("410")
+        for pin in config["poweron_outputs"]:
+            self.set_up_pin_raw(pin["gpio"], pin["active_low"])
 
-    def enable(self, which):
-        self.set_up_pin_raw(which, "0")
+    def set_up_pin(self, name, which, active_low=False):
+        self.pins[name] = {
+            "gpio": which,
+            "active_low": active_low,
+        }
+        self.set_up_pin_raw(which, active_low)
 
-    def set_up_pin(self, name, which, value="0"):
-        self.pins[name] = which
-        self.set_up_pin_raw(which, value)
-
-
-    def set_up_pin_raw(self, which, value):
+    def set_up_pin_raw(self, which, active_low):
         # export the pin
         try:
             with open("/sys/class/gpio/export", "w") as f:
@@ -81,9 +84,9 @@ class GpioToggler(object):
         # set the direction
         with open("/sys/class/gpio/gpio%s/direction" % which, "w") as f:
             f.write("out")
-        # set the output to zero
+        # set the output to the default
         with open("/sys/class/gpio/gpio%s/value" % which, "w") as f:
-            f.write(value)
+            f.write(active_low ? 1 : 0)
 
     def toggle_pin(self, pin):
         if self.pins.has_key(pin) == False:
@@ -91,7 +94,7 @@ class GpioToggler(object):
             return 400
         has_lock = self.lock.acquire(False)
         if has_lock:
-            t = threading.Thread(target=self.toggle_pin_worker, args=(pin,))
+            t = threading.Thread(target=self.toggle_pin_worker, args=(pins[pin],))
             t.start()
             return 200
         else:
@@ -99,12 +102,12 @@ class GpioToggler(object):
 
     def toggle_pin_worker(self, pin):
         try:
-            print "Toggling pin %s" % pin
-            with open("/sys/class/gpio/gpio%s/value" % self.pins[pin], "w") as f:
-                f.write("1")
+            print "Toggling pin %d" % pin["gpio"]
+            with open("/sys/class/gpio/gpio%s/value" % pins["gpio"], "w") as f:
+                f.write(pins["active_low"] ? 0 : 1)
                 f.flush()
                 time.sleep(0.25)
-                f.write("0")
+                f.write(pins["active_low"] ? 1 : 0)
                 f.flush()
             time.sleep(1.25)
             print "Unlocking!"
@@ -132,13 +135,17 @@ def slash():
 
 @app.route('/garage')
 def garage():
-    return render_template_string(TEMPLATE, csrf_token=csrf_token())
+    params = {
+      "csrf_token": csrf_token(),
+      "pins": toggler.pins,
+    }
+    return render_template_string(TEMPLATE, params)
 
 @app.route('/garage/<which>', methods=['POST'])
 def garage_post(which):
     return "", toggler.toggle_pin(which)
 
 if __name__ == '__main__':
-    toggler = GpioToggler()
+    toggler = GpioToggler(config.OPENER_CONFIG)
     app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0', port=80)
