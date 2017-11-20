@@ -5,19 +5,26 @@ It does exactly what it has to and no more!
 # How to use this
 
 1. Check out this git repository in `/root/garagetron` on your CHIP or whatever Linux device.
-2. Set up the GPIOs correctly (these work on a CHIP running kernel 4.3.0-ntc):
-
-    408 is for the door
-    409 is for the light
-    410 is the enable line
-
-3. Edit the lines in "garage.py" if you want to use a different GPIO port.
-4. Figure out the IP address of the device.
-5. Run `python garage.py`.
-6. Open "http://ipaddress/garage" in a browser, and click the button!
+2. Configure it, either with `cp config.py.chip config.py`, or by making a custom config.
+3. Figure out the IP address of the device.
+4. Run `python garage.py`.
+5. Open "http://ipaddress/garage" in a browser, and click the button!
 
 
 # To automatically start the script on boot:
 
 1. Copy the systemd service file to /etc/systemd/system/garagedoor.service
 2. Run `systemctl enable garagedoor.service`
+
+
+# Updating the config file
+
+The config file lets you specify which GPIO pins correspond to switches.
+The `config.py.chip` config uses all of the options! You're limited to as
+many switches as you have GPIOs.
+
+The "poweron outputs" are used in case you have an enable line. Once the garage
+script has loaded and configured all the normal outputs, it'll set the poweron
+outputs to whatever you've set.
+
+For example, on a CHIP, pin 408 is the garage door, 409 is the light, and 410 is the enable line.

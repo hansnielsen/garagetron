@@ -13,7 +13,7 @@ app = Flask('garage')
 TEMPLATE = '''
 <html><head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Garage door opener</title>
+<title>Garage door</title>
 <style type="text/css">
 html, body {
     margin: auto;
