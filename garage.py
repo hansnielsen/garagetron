@@ -130,6 +130,11 @@ def csrf_protect():
             print("Got bad CSRF token in request! Origin was %s" % (request.headers.get("Origin")))
             abort(400)
 
+@app.after_request
+def no_clickjacking(response):
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    return response
+
 @app.route('/')
 def slash():
     return redirect('/garage')
