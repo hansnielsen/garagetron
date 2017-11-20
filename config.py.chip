@@ -14,9 +14,9 @@ OPENER_CONFIG = {
     },
   ],
   "poweron_outputs": [
-    [
+    {
       "gpio": 410,
-      "active_low": True,
-    ],
+      "default_value": "0",
+    },
   ],
 }

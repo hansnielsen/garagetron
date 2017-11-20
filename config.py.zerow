@@ -1,0 +1,12 @@
+OPENER_CONFIG = {
+  "remote_outputs": [
+    {
+      "id": "garage",
+      "desc": "Door",
+      "gpio": 16,
+      "active_low": False,
+    },
+  ],
+  "poweron_outputs": [
+  ],
+}
